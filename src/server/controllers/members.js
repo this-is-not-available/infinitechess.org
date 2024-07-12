@@ -309,6 +309,22 @@ function getInfo(username) {
     }
 }
 
+const setElo = (username, value) => {
+    if (!doesMemberExist(username)) {
+        const errText = `Cannot set elo property of non-existent member "${username}"!`;
+        logEvents(errText, "errLog.txt", { print: true });
+        return false;
+    }
+    if (isNaN(parseInt(value))) {
+        const errText = `Cannot set member ${getUsernameCaseSensitive(username)}'s elo parameter to any value besides a number! Received value: ${value}`
+        logEvents(errText, "errLog.txt", { print: true });
+        return false;
+    }
+    members[username].elo = value;
+    membersHasBeenEdited = true; // Flag it to be saved
+    return true; // Success
+}
+
 async function save() {
     console.log("Saving members file..");
     return await writeFile(
