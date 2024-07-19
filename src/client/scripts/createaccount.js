@@ -1,12 +1,17 @@
-const element_usernameInput = document.getElementById('username');
-const element_emailInput = document.getElementById('email');
-const element_passwordInput = document.getElementById('password');
-const element_submitButton = document.getElementById('submit');
 
+const usernameInputElement = document.getElementById('username');
+const emailInputElement = document.getElementById('email');
+const passwordInputElement = document.getElementById('password');
+const submitButton = document.getElementById('submit');
 
+// This will be an object with 3 arrays: memberList, reservedUsernames, profainWords
+let data;
+fetch('/createaccount/data')
+    .then((response) => response.json())
+    .then((result) => {data = result});
 
 let usernameHasError = false;
-element_usernameInput.addEventListener('input', (event) => { // When username field changes...
+usernameInputElement.addEventListener('input', (event) => { // When username field changes...
     
     // Test if the value of the username input field won't be accepted.
 
@@ -17,66 +22,77 @@ element_usernameInput.addEventListener('input', (event) => { // When username fi
 
     let usernameError = document.getElementById("usernameerror"); // Does an error already exist?
 
-    const lengthError = element_usernameInput.value.length < 3;
-    const formatError = !onlyLettersAndNumbers(element_usernameInput.value);
+    const lengthError = usernameInputElement.value.length < 3;
+    const formatError = !onlyLettersAndNumbers(usernameInputElement.value);
+    // If data is still uninitiated (late fetch call), just assume there's no error.
+    const usernameReservedError = 
+        data ? !lengthError && data.reservedUsernames.indexOf(usernameInputElement.value.toLowerCase()) !== -1
+        : false;
+    const profainError = 
+        data ? !lengthError && checkProfanity(usernameInputElement.value)
+        : false;
 
     // If ANY error, make sure errorElement is created
-    if (lengthError || formatError) {
+    if (lengthError || formatError || usernameReservedError || profainError) {
         if (!usernameError) { // Create empty errorElement
             usernameHasError = true;
             createErrorElement('usernameerror', "usernameinputline");
             // Change input box to red outline
-            element_usernameInput.style.outline = 'solid 1px red';
+            usernameInputElement.style.outline = 'solid 1px red';
             // Reset variable because it now exists.
             usernameError = document.getElementById("usernameerror");
         }
     } else if (usernameError) { // No errors, delete that error element if it exists
         usernameHasError = false;
         usernameError.remove();
-        element_usernameInput.removeAttribute('style');
+        usernameInputElement.removeAttribute('style');
     }
     
-    if (lengthError && formatError) { // Change error message
+    if (lengthError && formatError) {
         usernameError.textContent = 'Username must be atleast 3 characters long, and only contain letters A-Z and numbers 0-9';
-    } else if (lengthError) {
+    } else if (lengthError) { // Change error message
         usernameError.textContent = 'Username must be atleast 3 characters long';
     } else if (formatError) {
         usernameError.textContent = 'Username must only contain letters A-Z and numbers 0-9';
+    } else if (usernameReservedError) {
+        usernameError.textContent = 'That username is reserved'
+    } else if (profainError) {
+        usernameError.textContent = 'That username contains a word that is not allowed'
     }
 
     updateSubmitButton();
 })
-element_usernameInput.addEventListener('focusout', (event) => { // Check username availability...
-    if (element_usernameInput.value.length === 0 || usernameHasError) return;
+usernameInputElement.addEventListener('focusout', (event) => { // Check username availability...
+    if (usernameInputElement.value.length === 0 || usernameHasError) return;
 
-    fetch(`/createaccount/username/${element_usernameInput.value}`)
+    fetch(`/createaccount/username/${usernameInputElement.value}`)
     .then((response) => response.json())
-    .then((result) => { // { allowed, reason }
+    .then((result) => {
         // We've got the result back from the server,
         // Is this username available to use?
-        if (result.allowed === true) return; // Not in use
+        if (result[0] === true) return; // Not in use
 
         // ERROR! In use!
         usernameHasError = true;
         createErrorElement('usernameerror', "usernameinputline");
         // Change input box to red outline
-        element_usernameInput.style.outline = 'solid 1px red';
+        usernameInputElement.style.outline = 'solid 1px red';
         // Reset variable because it now exists.
         usernameError = document.getElementById("usernameerror");
 
-        usernameError.textContent = result.reason;
+        usernameError.textContent = 'That username is taken';
         updateSubmitButton();
     });
 })
 
 let emailHasError = false;
-element_emailInput.addEventListener('input', (event) => { // When email field changes...
+emailInputElement.addEventListener('input', (event) => { // When email field changes...
     
     // Test if the email is a valid email format
 
     let emailError = document.getElementById("emailerror"); // Does an error already exist?
 
-    const error = !validEmail(element_emailInput.value);
+    const error = !validEmail(emailInputElement.value);
 
     // If ANY error, make sure errorElement is created
     if (error) {
@@ -84,14 +100,14 @@ element_emailInput.addEventListener('input', (event) => { // When email field ch
             emailHasError = true;
             createErrorElement('emailerror', 'emailinputline')
             // Change input box to red outline
-            element_emailInput.style.outline = 'solid 1px red';
+            emailInputElement.style.outline = 'solid 1px red';
             // Reset variable because it now exists.
             emailError = document.getElementById("emailerror");
         }
     } else if (emailError) { // No errors, delete that error element if it exists
         emailHasError = false;
         emailError.remove();
-        element_emailInput.removeAttribute('style');
+        emailInputElement.removeAttribute('style');
     }
     
     if (error) {
@@ -100,10 +116,10 @@ element_emailInput.addEventListener('input', (event) => { // When email field ch
 
     updateSubmitButton();
 })
-element_emailInput.addEventListener('focusout', (event) => { // Check email availability...
+emailInputElement.addEventListener('focusout', (event) => { // Check email availability...
     // If it's blank, all the server would send back is the createaccount.html again..
-    if (element_emailInput.value.length > 1 && !emailHasError) { 
-        fetch(`/createaccount/email/${element_emailInput.value}`)
+    if (emailInputElement.value.length > 1 && !emailHasError) { 
+        fetch(`/createaccount/email/${emailInputElement.value}`)
         .then((response) => response.json())
         .then((result) => {
             // We've got the result back from the server,
@@ -112,7 +128,7 @@ element_emailInput.addEventListener('focusout', (event) => { // Check email avai
                 emailHasError = true;
                 createErrorElement('emailerror', 'emailinputline')
                 // Change input box to red outline
-                element_emailInput.style.outline = 'solid 1px red';
+                emailInputElement.style.outline = 'solid 1px red';
                 // Reset variable because it now exists.
                 const emailError = document.getElementById("emailerror");
 
@@ -124,14 +140,14 @@ element_emailInput.addEventListener('focusout', (event) => { // Check email avai
 })
 
 let passwordHasError = false;
-element_passwordInput.addEventListener('input', (event) => { // When password field changes...
+passwordInputElement.addEventListener('input', (event) => { // When password field changes...
     
     let passwordError = document.getElementById("passworderror"); // Does an error already exist?
 
-    const shortError = element_passwordInput.value.length < 6;
-    const longError = element_passwordInput.value.length > 72;
-    const formatError = !validPassword(element_passwordInput.value);
-    const containsPasswordError = element_passwordInput.value.toLowerCase() === 'password';
+    const shortError = passwordInputElement.value.length < 6;
+    const longError = passwordInputElement.value.length > 72;
+    const formatError = !validPassword(passwordInputElement.value);
+    const containsPasswordError = passwordInputElement.value.toLowerCase() === 'password';
 
     // If ANY error, make sure errorElement is created
     if (shortError || longError || formatError || containsPasswordError) {
@@ -139,14 +155,14 @@ element_passwordInput.addEventListener('input', (event) => { // When password fi
             passwordHasError = true;
             createErrorElement('passworderror', 'passwordinputline');
             // Change input box to red outline
-            element_passwordInput.style.outline = 'solid 1px red';
+            passwordInputElement.style.outline = 'solid 1px red';
             // Reset variable because it now exists.
             passwordError = document.getElementById("passworderror");
         }
     } else if (passwordError) { // No errors, delete that error element if it exists
         passwordHasError = false;
         passwordError.remove();
-        element_passwordInput.removeAttribute('style');
+        passwordInputElement.removeAttribute('style');
     }
 
     if (formatError) {
@@ -162,22 +178,16 @@ element_passwordInput.addEventListener('input', (event) => { // When password fi
     updateSubmitButton();
 })
 
-element_submitButton.addEventListener('click', (event) => {
+submitButton.addEventListener('click', (event) => {
     event.preventDefault();
 
     if (!usernameHasError && !emailHasError && !passwordHasError
-        && element_usernameInput.value
-        && element_emailInput.value
-        && element_passwordInput.value) sendForm(element_usernameInput.value, element_emailInput.value, element_passwordInput.value);
+        && usernameInputElement.value
+        && emailInputElement.value
+        && passwordInputElement.value) sendForm(usernameInputElement.value, emailInputElement.value, passwordInputElement.value);
 })
 
-/**
- * Sends our form data to the createaccount route.
- * @param {string} username 
- * @param {string} email 
- * @param {string} password 
- */
-function sendForm(username, email, password) {
+sendForm = function (username, email, password) {
     let OK = false;
     let config = {
         method: 'POST',
@@ -201,7 +211,7 @@ function sendForm(username, email, password) {
     });
 }
 
-function createErrorElement(id, insertAfter) {
+createErrorElement = function (id, insertAfter) {
     const errElement = document.createElement('div');
     errElement.className = 'error';
     errElement.id = id;
@@ -212,30 +222,39 @@ function createErrorElement(id, insertAfter) {
 
 // Greys-out submit button if there's any errors.
 // The click-prevention is taken care of in the submit event listener.
-function updateSubmitButton() {
+const updateSubmitButton = function() {
     if (usernameHasError || emailHasError || passwordHasError
-        || !element_usernameInput.value
-        || !element_emailInput.value
-        || !element_passwordInput.value) {
-        element_submitButton.className = 'unavailable';
+        || !usernameInputElement.value
+        || !emailInputElement.value
+        || !passwordInputElement.value) {
+        submitButton.className = 'unavailable';
     } else { // No Errors
-        element_submitButton.className = 'ready';
+        submitButton.className = 'ready';
     }
 }
 
-function onlyLettersAndNumbers(string) {
+onlyLettersAndNumbers = function(string) {
     if (!string) return true;
     return /^[a-zA-Z0-9]+$/.test(string);
 }
 
-function validEmail(string) {
+// Returns true if bad word is found
+checkProfanity = function(string) {
+    for (let i = 0; i < data.profainWords.length; i++) {
+        profanity = data.profainWords[i];
+        if (string.toLowerCase().includes(profanity)) return true;
+    }
+    return false;
+}
+
+validEmail = function(string) {
     // Credit for the regex: https://stackoverflow.com/a/201378
     const regex = /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/;
     if (regex.test(string) === true) return true;
     return false;
 }
 
-function validPassword(string) {
+validPassword = function(string) {
     const regex = /^[a-zA-Z0-9!@#$%^&*\?]+$/;
 
     if (regex.test(string) === true) return true;

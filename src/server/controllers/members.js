@@ -39,17 +39,6 @@ const refreshTokenHash = (function constructRefreshTokenList() {
 /** The maximum number of login sessions a user can have at once. */
 const sessionsCap = 3;
 
-
-/** A hash table with each email in use for the key, and *true* for the value. */
-const emailHash = (function constructEmailHash() {
-    const newEmailList = {};
-    for (let key in members) {
-        newEmailList[members[key].email] = true;
-    }
-    return newEmailList;
-})();
-
-
 /**
  * Whether there has been a recent change to the members data.
  * It is periodically saved.
@@ -79,14 +68,6 @@ const getUsernameCaseSensitive = (username) => {
 }
 
 /**
- * Retrieves all usernames from the members object.
- * @returns {string[]} - An array of all usernames, in lowercase.
- */
-function getAllUsernames() {
-    return Object.keys(members);
-}
-
-/**
  * Returns the member's hashed password, if they exist, otherwise undefined.
  * @param {string} username - Their username, in lowercase.
  * @returns {string|undefined} Their hashed password, if they exist, otherwise undefined.
@@ -99,22 +80,12 @@ const getEmail = (memberKey) => {
     return members[memberKey]?.email;
 }
 
-/**
- * Tests if the provided email is not being used
- * @param {string} email - The email
- * @returns {boolean} true if the email is not in use
- */
-const isEmailAvailable = function (email) {
-    if (emailHash[email]) return false;
-    return true;
-}
-
 function getJoinDate(username) {
-    return new Date(members[username]?.joined);
+    return members[username]?.joined;
 }
 
 function getLastSeen(username) {
-    return new Date(members[username]?.seen);
+    return members[username]?.seen;
 }
 
 function getElo(username) {
@@ -154,12 +125,7 @@ function addMember(username, newMember) {
         logEvents(errString, 'errLog.txt', { print: true });
         return false;
     }
-
-    // Add the member
     members[username] = newMember;
-    // Update email hash!
-    emailHash[newMember.email] = true;
-
     membersHasBeenEdited = true; // Flag it to be saved
     return true; // Success
 }
@@ -178,22 +144,11 @@ function removeMember(username) {
         return false;
     }
 
-    // (Roles are removed from within removeAccountController)
-    deleteEmailFromHash(getEmail(username)); // Allows them to recreate an account with the same email
-    deleteAllRefreshTokensOfMemberFromHash(username); // Invalidates all their refresh tokens
+    // Roles are removed from within removeAccountController
 
-    delete members[username]; // Delete them
+    delete members[username];
     membersHasBeenEdited = true; // Flag it to be saved
     return true; // Success
-}
-
-/**
- * Deletes the given email from the email hash.
- * Call after deleting an account.
- * @param {string} email - The email to delete
- */
-function deleteEmailFromHash(email) {
-    delete emailHash[email];
 }
 
 /**
@@ -281,28 +236,6 @@ const deleteRefreshToken = async (username, token) => {
     thisMember.refreshTokens.splice(index, 1)
 
     membersHasBeenEdited = true; // Flag it to be saved
-    return true; // Success
-}
-
-/**
- * Deletes all the refresh tokens of a member from the hash,
- * NOT from their member data!
- * Call before deleting their account.
- * @param {string} username - Their username, in lowercase
- * @returns {boolean} true if it was successful
- */
-function deleteAllRefreshTokensOfMemberFromHash(username) {
-    if (!doesMemberExist(username)) {
-        const errText = `Cannot delete all the refresh tokens from non-existent member "${username}"!`;
-        logEvents(errText, "errLog.txt", { print: true });
-        return false;
-    }
-
-    for (const token of members[username].refreshTokens) {
-        // Delete from the hash
-        delete refreshTokenHash[token]
-    }
-
     return true; // Success
 }
 
@@ -408,12 +341,19 @@ async function saveMembersIfChangesMade() {
     if (await save()) membersHasBeenEdited = false;
 }
 
+function constructEmailHash() { // Constructs an object with each used email as the key.
+    const newEmailList = {};
+    for (let key in members) {
+        newEmailList[members[key].email] = true;
+    }
+    return newEmailList;
+}
+
 
 
 module.exports = {
     doesMemberExist,
     getUsernameCaseSensitive,
-    getAllUsernames,
     getHashedPassword,
     getMemberData,
     findMemberFromRefreshToken,
@@ -428,9 +368,9 @@ module.exports = {
     incrementLoginCount,
     updateLastSeen,
     saveMembersIfChangesMade,
+    constructEmailHash,
     getJoinDate,
     getLastSeen,
     getElo,
-    removeMember,
-    isEmailAvailable
+    removeMember
 }
