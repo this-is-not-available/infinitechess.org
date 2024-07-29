@@ -48,6 +48,8 @@ function Socket() {
         renewConnectionTimeoutID: undefined,
         /** A function that when called, returns true if this socket has an open invite. @type {Function} */
         hasInvite: undefined,
+        /** Their preferred language. For example, 'en-US'. This is determined by their `i18next` cookie. */
+        i18next: undefined,
     }
 }
 
@@ -81,7 +83,7 @@ function Game() {
     this.startTimeMillis = undefined;
     /** The increment amount, in seconds. */
     this.incrementMillis = undefined;
-    /** Whether the game is rated. "Yes" or "No" */
+    /** Whether the game is rated. true or false */
     this.rated = undefined;
     /** The white player: `{ member }` or `{ browser }` */
     this.white = undefined;
