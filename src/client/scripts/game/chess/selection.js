@@ -32,7 +32,7 @@ const selection = (function() {
 
     /**
      * Returns the current selected piece, if there is one.
-     * @returns {Object | undefined} The selected piece, if there is one: `{ type, index, coords }`, otherwise undefined.
+     * @returns {Piece | undefined} The selected piece, if there is one: `{ type, index, coords }`, otherwise undefined.
      */
     function getPieceSelected() { return pieceSelected; }
 
@@ -214,7 +214,7 @@ const selection = (function() {
     function reselectPiece() {
         if (!pieceSelected) return; // No piece to reselect.
         const gamefile = game.getGamefile();
-        if (movesscript.didPieceMoveLastTurn(gamefile, pieceSelected.coords)) {
+        if (movesscript.didPieceMoveLastTurnOrWasCaptured(gamefile, pieceSelected.coords)) {
             unselectPiece(); // Can't be reselected, unselect it instead.
             return;
         }
