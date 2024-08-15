@@ -13,9 +13,9 @@ const main = (function(){
      * The version of the game code currently running.
      * If this is old, the server will instruct us to refresh.
      * 
-     * THIS SHOULD ALWAYS MATCH config/convig/DEV_VERSION
+     * THIS SHOULD ALWAYS MATCH config/convig/GAME_VERSION
      */
-    const GAME_VERSION = "1.3.3.1"; // The current version of the game
+    const GAME_VERSION = "1.4"; // The current version of the game
     const devBuild = true // If true, the time when the main menu background stops moving is 2 seconds.
     const videoMode = false; // If true, doesn't render a few items, making recordings more immersive.
 
@@ -76,7 +76,7 @@ const main = (function(){
             // "1000 Closed by client" instead of "1001 Endpoint left"
             websocket.closeSocket();
 
-            validation.deleteToken();
+            memberHeader.deleteToken();
             
             invites.deleteInviteTagInLocalStorage();
             localstorage.eraseExpiredItems();

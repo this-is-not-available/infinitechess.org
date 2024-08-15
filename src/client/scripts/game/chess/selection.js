@@ -214,10 +214,15 @@ const selection = (function() {
     function reselectPiece() {
         if (!pieceSelected) return; // No piece to reselect.
         const gamefile = game.getGamefile();
-        if (movesscript.didPieceMoveLastTurnOrWasCaptured(gamefile, pieceSelected.coords)) {
+        // Test if the piece is no longer there
+        // This will work for us long as it is impossible to capture friendly's
+        const pieceTypeOnCoords = gamefileutility.getPieceTypeAtCoords(gamefile, pieceSelected.coords);
+        if (pieceTypeOnCoords !== pieceSelected.type) { // It either moved, or was captured
             unselectPiece(); // Can't be reselected, unselect it instead.
             return;
         }
+
+        if (game.getGamefile().gameConclusion) return; // Don't reselect, game is over
 
         // Reselect! Recalc its legal moves, and recolor.
         const newIndex = gamefileutility.getPieceIndexByTypeAndCoords(gamefile, pieceSelected.type, pieceSelected.coords);

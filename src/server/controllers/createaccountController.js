@@ -26,7 +26,7 @@ const emailHash = constructEmailHash();
  * Usernames that are reserved. New members cannot use these are their name.
  * 
  * However, the following have been used:
- * admin, amazon, google, tesla, epic, epicgames, usa, america
+ * admin
  */
 const reservedUsernames = [
     'infinitechess',

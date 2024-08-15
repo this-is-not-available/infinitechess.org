@@ -29,8 +29,18 @@ const element_change = document.getElementById('change')
 
 let isOurProfile = false;
 
-const splitHREF = window.location.href.split('/');
-const member = splitHREF[splitHREF.length-1];
+const member = getLastSegmentOfURL();
+
+/**
+ * Gets the last segment of the current URL without query parameters.
+ * @returns {string} - The last segment of the URL.
+ */
+function getLastSegmentOfURL() {
+    const url = new URL(window.location.href);
+    const pathname = url.pathname;
+    const segments = pathname.split('/');
+    return segments[segments.length - 1] || segments[segments.length - 2]; // Handle situation if trailing '/' is present
+}
 
 refreshAndUpdateNav();
 
@@ -63,6 +73,20 @@ function refreshAndUpdateNav () {
             loadMemberData();
         }
     });
+}
+
+/**
+ * Fetches data from a given endpoint after removing any query parameters from the URL.
+ * 
+ * @param {string} member - The member identifier to include in the URL.
+ * @param {Object} config - The configuration object for the fetch request.
+ * @returns {Promise<Response>} - The fetch response promise.
+ */
+function removeQueryParamsFromLink(link) {
+    const url = new URL(link, window.location.origin);
+    // Remove query parameters
+    url.search = '';
+    return url.toString()
 }
 
 function loadMemberData (loggedInAs) {
@@ -209,30 +233,3 @@ function revealElement(element) {
 }
 
 window.addEventListener("resize", (event) => { recalcUsernameSize() });
-
-favicon: { // This block auto detects device theme and adjusts the browser icon accordingly
-
-    const element_favicon = document.getElementById('favicon');
-
-    /**
-     * Switches the browser icon to match the given theme.
-     * @param {string} theme "dark"/"light"
-     */
-    function switchFavicon(theme) {
-        if (theme === 'dark') element_favicon.href = '/img/favicon-dark.png';
-        else favicon.href = '/img/favicon-light.png';
-    }
-    
-    if (!window.matchMedia) break favicon; // Don't create a theme-change event listener if matchMedia isn't supported.
-
-    // Initial theme detection
-    const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    switchFavicon(prefersDarkScheme ? 'dark' : 'light');
-    
-    // Listen for theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-        const newTheme = event.matches ? 'dark' : 'light';
-        console.log(`Toggled ${newTheme} icon`);
-        switchFavicon(newTheme);
-    });
-}

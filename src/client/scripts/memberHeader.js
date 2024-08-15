@@ -5,7 +5,7 @@
 
 "use strict";
 
-const validation = (function(){
+const memberHeader = (function(){
 
     const TOKEN_EXPIRE_TIME_MILLIS = 1000 * 60 * 15; // Milliseconds   15m is the server expire time for access token.
     const cushionMillis = 10_000
@@ -23,6 +23,15 @@ const validation = (function(){
     const loginText = document.getElementById('logintext');
     const createaccountLink = document.getElementById('createaccountlink');
     const createaccountText = document.getElementById('createaccounttext');
+
+    /**
+     * Returns true if we've received back our first token request.
+     * After that, we know we either are logged in, or have a browser-id cookie.
+     * @returns {boolean}
+     */
+    function haveWeSentInitialRequest() {
+        return lastRefreshTime != null;
+    }
 
     // If we're logged in, the log in button will change to their profile,
     // and create account will change to log out...
@@ -57,9 +66,20 @@ const validation = (function(){
     }
 
     /**
+     * This function will not return until our initial request for an access token,
+     * to see if we're logged in, is back.
+     */
+    async function waitUntilInitialRequestBack() {
+        while (lastRefreshTime == null) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+
+
+    /**
      * Inits our token, and, if we're logged in, inits member, and changes navigation links if we're logged in.
      * 
-     * If we're not signed in, the server will give/renew us a browser-id cookie for validation.
+     * If we're not signed in, the server will give/renew us a browser-id cookie for validating our identity.
      */
     function refreshToken() {
         requestOut = true;
@@ -82,12 +102,12 @@ const validation = (function(){
                 }
 
                 member = result.member;
-                changeNavigationLinks();
             } else { // Unauthorized, don't change any navigation links. Should have given us a browser-id!
                 console.log(`Server: ${result['message']}`);
                 areLoggedIn = false;
             }
 
+            updateNavigationLinks();
             lastRefreshTime = Date.now();
             requestOut = false;
         })
@@ -100,17 +120,61 @@ const validation = (function(){
     }
 
     /**
-     * Changes the navigation links if we're logged in.
-     * 
-     * Changes the Login and Create Account buttons to Profile and Log Out buttons.
+     * Changes the navigation links, depending on if we're logged in, to
+     * go to our Profile or the Log Out route, or the Log In / Create Account pages.
      */
-    function changeNavigationLinks() {
+    function updateNavigationLinks() {
+        if (areLoggedIn) {
+            loginLink.href = addLngQueryParamToLink(`/member/${member.toLowerCase()}`);
+            loginText.textContent = translations["js-profile"];
+            createaccountLink.href = addLngQueryParamToLink('/logout');
+            createaccountText.textContent = translations["js-logout"];
+        } else { // Not logged in
+            loginLink.href = addLngQueryParamToLink('/login');
+            loginText.textContent = translations["js-login"];
+            createaccountLink.href = addLngQueryParamToLink('/createaccount');
+            createaccountText.textContent = translations["js-createaccount"];
+        }
+    }
 
-        loginLink.setAttribute('href', `/member/${member.toLowerCase()}`);
-        loginText.textContent = translations["js-profile"];
+    /**
+     * Adds the "lng" query parameter to all navigation links.
+     */
+    function addLngToNavLinks() {
+      const lng = getCookieValue('i18next');
+      if (!lng) return;
+    
+      const navLinks = document.querySelectorAll('nav a');
+      navLinks.forEach(link => {
+        link.href = addLngQueryParamToLink(link);
+      });
 
-        createaccountLink.setAttribute('href', '/logout');
-        createaccountText.textContent = translations["js-logout"];
+      /** Adds the "lng" query parameter to the ToS link at the bottom, if it exists (it doesn't on the play page) */
+      toslink: {
+        const element_toslink = document.getElementById("toslink");
+        if (!element_toslink) break toslink;
+        element_toslink.href = addLngQueryParamToLink(element_toslink)
+      }
+    }
+
+    /**
+     * Modifies the given URL to include the "lng" query parameter based on the i18next cookie.
+     * @param {string} href - The original URL.
+     * @returns {string} The modified URL with the "lng" query parameter.
+     */
+    function addLngQueryParamToLink(href) {
+        // Get the value of the i18next cookie
+        const lng = getCookieValue('i18next');
+        if (!lng) return href;
+    
+        // Create a URL object from the given href
+        const url = new URL(href, window.location.origin);
+    
+        // Add or update the "lng" query parameter
+        url.searchParams.set('lng', lng);
+    
+        // Return the modified URL as a string
+        return url.toString();
     }
 
     /**
@@ -136,12 +200,16 @@ const validation = (function(){
 
     refreshToken();
 
+    // Ensure the lng query parameter is added to all nav links
+    addLngToNavLinks();
+
     return Object.freeze({
         getAccessToken,
         getMember,
         getCookieValue,
         deleteToken,
         areWeLoggedIn,
+        waitUntilInitialRequestBack
     })
 
 })();
@@ -171,4 +239,20 @@ favicon: { // This block auto detects device theme and adjusts the browser icon 
         console.log(`Toggled ${newTheme} icon`);
         switchFavicon(newTheme);
     });
+}
+
+{ // This block auto-removes the "lng" query parameter from the url, visually, without refreshing
+  function removeLngQueryParam() {
+    // Create a URL object from the current window location
+    const url = new URL(window.location);
+  
+    // Remove the "lng" query parameter
+    url.searchParams.delete('lng');
+  
+    // Update the browser's URL without refreshing the page
+    window.history.replaceState({}, '', url);
+  }
+ 
+  // Remove the "lng" param from the url bar when the DOM content is fully loaded
+  document.addEventListener('DOMContentLoaded', removeLngQueryParam);
 }

@@ -46,6 +46,8 @@ function Move() {
         inCheck: undefined,
         /** The gamefile's `attackers` property before this move was made. */
         attackers: undefined,
+        /** The gamefile's `gameConclusion` property before this move was made. */
+        gameConclusion: undefined,
     }
     /** The move in most compact notation: `8,7>8,8Q` */
     this.compact = undefined;
@@ -240,19 +242,6 @@ const movesscript = (function(){
     }
 
     /**
-     * Returns true if the piece on the provided coordinates just barely moved last turn.
-     * @param {gamefile} gamefile 
-     * @param {number[]} coords - The coordinates of the piece
-     */
-    function didPieceMoveLastTurnOrWasCaptured(gamefile, coords) {
-        const lastMove = getLastMove(gamefile.moves);
-        if (!lastMove) return false; // Beginning of the game, it hasn't moved.
-        if (math.areCoordsEqual(lastMove.startCoords, coords)) return true; // It just moved
-        if (math.areCoordsEqual(lastMove.endCoords, coords)) return true; // It was just captured
-        return false;
-    }
-
-    /**
      * Deletes the latest move played.
      * @param {Move[]} moves - The moves list
      */
@@ -348,7 +337,6 @@ const movesscript = (function(){
         getWhosTurnAtFront,
         getPlyCount,
         hasPieceMoved,
-        didPieceMoveLastTurnOrWasCaptured,
         deleteLastMove,
         flagLastMoveAsCheck,
         flagLastMoveAsMate,
